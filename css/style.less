@@ -1,3 +1,5 @@
+@import "classes.less";
+
 body {
 	width: 100%;
 	padding: 0;
@@ -5,6 +7,7 @@ body {
 	background-color: #000;
 	color: #fff;
 	font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+	overflow-x: hidden;
 }
 
 ul {
@@ -59,27 +62,6 @@ a {
 
 #listview {
 	z-index: 1;
-}
-
-.drag {
-	z-index: 999 !important;
-	-webkit-transition: all 0 cubic-bezier(0,0,0.2,1) !important;
-}
-
-.shadow {
-	box-shadow: 0 1px 6px rgba(0,0,0,.25);
-}
-
-.slow {
-	-webkit-transition: all .35s ease-in-out !important;
-}
-
-.medium {
-	-webkit-transition: all .25s ease-in-out !important;
-}
-
-.fast {
-	-webkit-transition: all .15s ease !important;
 }
 
 .list, .todo {

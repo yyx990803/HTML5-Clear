@@ -1366,11 +1366,11 @@ window.Zepto = Zepto;
     }
   }
 
-  var longTapDelay = 750;
+  var longTapDelay = 650;
   function longTap(){
     if (touch.last && (Date.now() - touch.last >= longTapDelay)) {
       $(touch.target).trigger('longTap');
-      touch = {};
+      //touch = {};
     }
   }
 

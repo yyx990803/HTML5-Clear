@@ -1,4 +1,9 @@
-body{width:100%;padding:0;margin:0;background-color:#000;color:#fff;font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;}
+.drag{-webkit-transition:all 0 cubic-bezier(0, 0, 0.2, 1) !important;}
+.dragged{z-index:999 !important;box-shadow:0 1px 8px rgba(0, 0, 0, 0.3);-webkit-transition:all 0 cubic-bezier(0, 0, 0.2, 1) !important;}
+.slow{-webkit-transition:all 0.35s ease-in-out !important;}
+.medium{-webkit-transition:all 0.25s ease-in-out !important;}
+.fast{-webkit-transition:all .15s ease !important;}
+body{width:100%;padding:0;margin:0;background-color:#000;color:#fff;font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;overflow-x:hidden;}
 ul{margin:0;padding:0;list-style-type:none;}
 a{color:#fff;text-decoration:none;}
 #wrapper{overflow-x:hidden;overflow-y:auto;}
@@ -8,11 +13,6 @@ a{color:#fff;text-decoration:none;}
 #home,#listview{position:absolute;width:100%;height:100%;top:0;left:0;-webkit-transition:all .15s ease;-webkit-perspective:0;-webkit-backface-visibility:hidden;}
 #home{z-index:2;}
 #listview{z-index:1;}
-.drag{z-index:999 !important;-webkit-transition:all 0 cubic-bezier(0, 0, 0.2, 1) !important;}
-.shadow{box-shadow:0 1px 6px rgba(0, 0, 0, 0.25);}
-.slow{-webkit-transition:all 0.35s ease-in-out !important;}
-.medium{-webkit-transition:all 0.25s ease-in-out !important;}
-.fast{-webkit-transition:all .15s ease !important;}
 .list,.todo{height:60px;-webkit-user-select:none;-webkit-transition:all .1s ease;-webkit-perspective:0;-webkit-backface-visibility:hidden;position:relative;}.list .inner,.todo .inner{height:58px;padding:0 10px;font-size:18px;font-weight:bold;line-height:58px;border-top:1px solid rgba(255, 255, 255, 0.1);border-bottom:1px solid rgba(0, 0, 0, 0.1);position:relative;}
 .list .name,.todo .name{display:inline-block;position:relative;}.list .name span,.todo .name span{position:absolute;z-index:2;display:block;width:100%;height:2px;background-color:#fff;left:0;top:52%;-webkit-perspective:0;-webkit-backface-visibility:hidden;-webkit-transform-origin:0%;-webkit-transition:-webkit-transform 0 cubic-bezier(0, 0, 0.2, 1);-webkit-transform:scalex(0);}
 .list input[type="text"],.todo input[type="text"]{border:none;background:transparent;color:#fff;font-size:18px;font-weight:bold;padding:0;}

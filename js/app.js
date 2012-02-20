@@ -5,7 +5,7 @@ var templates = {
 	},
 	List: function (list) {
 		var count = list.count();
-		return '<li class="list ' + (count == 0 ? 'empty' : '') + '" data-index="'+ list.index +'">'
+		return '<li class="list ' + (count == 0 ? 'empty' : '') + '">'
 		+ '<div class="inner">'
 		+ '<div class="name">' + list.name + '</div>'
 		+ '<div class="count">' + count + '</div>'
@@ -15,7 +15,7 @@ var templates = {
 		return '<ul id="listview"></ul>';
 	},
 	Todo: function (todo) {
-		return '<li class="todo ' + (todo.done ? 'done' : '') + '" data-index="' + todo.index + '">'
+		return '<li class="todo ' + (todo.done ? 'done' : '') + '">'
 		+ '<div class="inner">'
 		+ '<div class="name">' + todo.name + '<span></span></div>'
 		+ '</div></li>';
@@ -28,17 +28,23 @@ var Todo = function (name) {
 	this.done = false;
 };
 Todo.prototype = {
+	
 	render: function (list, index) {
+		
 		this.list = list;
 		this.index = index;
+		
 		var todo = this,
 			dragging = false,
+			dragFrom = 0,
 			swiping = false,
 			touch = {},
 			w = 55,
 			dx = dy = 0;
+			
 		todo.el = $(templates.Todo(todo));
 		var line = todo.el.find('span');
+		
 		todo.el.bind('touchstart', function(e){
 			if (e.touches.length == 1) {
 				touch.x1 = e.touches[0].pageX;
@@ -46,19 +52,23 @@ Todo.prototype = {
 			}
 		})
 		.bind('touchmove', function(e) {
-			if (!window.swipeLock && e.touches.length == 1) {
+			
+			if (!window.globalDrag && e.touches.length == 1) {
+				
 				dx = e.touches[0].pageX - touch.x1;
 				dy = e.touches[0].pageY - touch.y1;
-				if (Math.abs(dy) < 6 && !swiping) {
+				
+				if (Math.abs(dy) < 6 && Math.abs(dx) > 0 && !swiping && !dragging) {
 					swiping = true;
-					window.nodrag = true;
+					window.inAction = true;
 					todo.el.addClass('drag');
 					list.home.resetIcons(todo.el);
 				}
+				
 				if (swiping) {
 					if (dx > 0 && dx < w) {
 						var pct = dx/w;
-						if (pct < 0.03) pct = 0;
+						if (pct < 0.05) pct = 0;
 						$('#check').css('opacity', pct);
 						if (!todo.done) line.css('-webkit-transform', 'scaleX(' + pct + ')');
 					} else if (dx < 0 && dx > -w){
@@ -93,15 +103,31 @@ Todo.prototype = {
 						todo.el.css('-webkit-transform', 'translate3d(' + dx + 'px, 0, 0)');
 					}
 				}
+				
+				if (dragging) {
+					window.inAction = true;
+					todo.el.css('-webkit-transform', 'translate3d(0,' + (dy - dragFrom) + 'px, 0) scale(1.05)');
+					if (dy - dragFrom < - 30 || dy - dragFrom > + 30) {
+						var step = Math[dy > 0 ? 'ceil':'floor'](dy/60),
+							newDragFrom = step * 60;
+						if (dragFrom != newDragFrom) {
+							var target = $(todo.list.view.find('li.todo').get(todo.index + step));
+							target[newDragFrom > dragFrom ? 'after':'before'](todo.el);
+							dragFrom = newDragFrom;
+							todo.el.css('-webkit-transform', 'translate3d(0,' + (dy - dragFrom) + 'px, 0) scale(1.05)'); //update position immediately
+						}
+					}
+				}
+				
 			}
 		})
-		.swipeLeft(function(e){ //DELETE
-			if (!window.swipeLock) {
+		.swipeLeft(function(){ //DELETE
+			if (!window.globalDrag) {
 				todo.destroy();
 			}
 		})
-		.swipeRight(function(e){ //DONE
-			if (!window.swipeLock) {
+		.swipeRight(function(){ //DONE
+			if (!window.globalDrag) {
 				if (!todo.done) {
 					todo.done = true;
 					var dy = (todo.list.todos.length - 1) * 60 - todo.el.get(0).offsetTop;
@@ -138,26 +164,47 @@ Todo.prototype = {
 				}
 			}
 		})
-		.longTap(function(e){
-			//st
+		.longTap(function(){
+			if (!swiping) {
+				dragging = true;
+				dragFrom = 0;
+				todo.el.addClass('dragged').css('-webkit-transform', 'scale(1.05)');
+			}
 		})
 		.bind('touchend touchcancel', function(e){
 			if (e.touches.length == 0) {
-				window.nodrag = false;
-				dragging = false;
-				swiping = false;
+				
+				window.inAction = false;
+				
 				todo.el.removeClass('drag').css('-webkit-transform', 'translate3d(0,0,0)');
 				touch = {};
 				$('#cross, #check').css('opacity', 0);
-				if (!todo.done) {
-					line.addClass('fast').css('-webkit-transform', 'scaleX(0)');
-					setTimeout(function(){
-						line.removeClass('fast');
-					}, 150);
+				
+				if (swiping) {
+					swiping = false;
+					if (!todo.done) {
+						line.addClass('fast').css('-webkit-transform', 'scaleX(0)');
+						setTimeout(function(){
+							line.removeClass('fast');
+						}, 150);
+					}
 				}
+				
+				if (dragging) {
+					e.stopPropagation();
+					dragging = false;
+					todo.el.removeClass('dragged');
+					var newIndex = dragFrom/60 + todo.index,
+						todos = todo.list.todos;
+					todos.splice(todo.index, 1);
+					todos.splice(newIndex, 0, todo);
+					todo.list.resetView();
+				}
+				
 			}
 		});
 		
+		//edit
 		todo.el.find('.name').tap(function(e){
 			e.stopPropagation();
 			todo.el.siblings().css('opacity', .3);
@@ -165,7 +212,7 @@ Todo.prototype = {
 			$(this).html($('<input type="text" value="' + oname + '"/>').blur(function(){
 				todo.el.siblings().css('opacity', 1);
 				todo.name = this.value;
-				$(this).replaceWith(this.value);
+				todo.list.resetView();
 			}));
 		});
 		return todo.el;
@@ -193,6 +240,7 @@ List.prototype = {
 		this.index = index;
 		var list = this,
 			dragging = false,
+			dragFrom = 0,
 			swiping = false,
 			touch = {},
 			w = 55;
@@ -204,12 +252,12 @@ List.prototype = {
 			}
 		})
 		.bind('touchmove', function(e) {
-			if (!window.swipeLock && e.touches.length == 1) {
+			if (!window.globalDrag && e.touches.length == 1) {
 				var dx = e.touches[0].pageX - touch.x1,
 					dy = e.touches[0].pageY - touch.y1;
-				if (Math.abs(dy) < 6 && !swiping) {
+				if (Math.abs(dy) < 6 && Math.abs(dx) > 0 && !swiping && !dragging) {
 					swiping = true;
-					window.nodrag = true;
+					window.inAction = true;
 					list.el.addClass('drag');
 					home.resetIcons(list.el);
 				}
@@ -235,18 +283,26 @@ List.prototype = {
 						list.el.css('-webkit-transform', 'translate3d(' + dx + 'px, 0, 0)');
 					}
 				}
+				
+				if (dragging) {
+					window.inAction = true;
+					list.el.css('-webkit-transform', 'translate3d(0,' + (dy - dragFrom) + 'px, 0) scale(1.05)');
+					if (dy - dragFrom < - 30 || dy - dragFrom > + 30) {
+						var step = Math[dy > 0 ? 'ceil':'floor'](dy/60),
+							newDragFrom = step * 60;
+						if (dragFrom != newDragFrom) {
+							var target = $(list.home.el.find('li.list').get(list.index + step));
+							target[ newDragFrom > dragFrom ? 'after':'before'](list.el);
+							dragFrom = newDragFrom;
+							list.el.css('-webkit-transform', 'translate3d(0,' + (dy - dragFrom) + 'px, 0) scale(1.05)');
+						}
+					}
+				}
+				
 			}
 		})
-		.bind('touchend touchcancel', function(e){
-			window.nodrag = false;
-			dragging = false;
-			swiping = false;
-			list.el.removeClass('drag').css('-webkit-transform', 'translate3d(0,0,0)');
-			touch = {};
-			$('#cross, #check').css('opacity', 0);
-		})
 		.swipeLeft(function(e){
-			if (!window.swipeLock) {
+			if (!window.globalDrag) {
 				var l = list.count();
 				if ((l > 0 && confirm('This list contains ' + l + ' items. Are you sure you want to delete it?')) || l == 0) {
 					list.destroy();
@@ -254,7 +310,7 @@ List.prototype = {
 			}
 		})
 		.swipeRight(function(e){
-			if (!window.swipeLock && list.count() > 0 && confirm('Are you sure you want to complete all your items in this list?')) {
+			if (!window.globalDrag && list.count() > 0 && confirm('Are you sure you want to complete all your items in this list?')) {
 				$.each(list.todos, function(i, t) {
 					t.done = true;
 				});
@@ -262,11 +318,41 @@ List.prototype = {
 			}
 		})
 		.longTap(function(e){
-			//start vertical dragging
+			if (!swiping) {
+				dragging = true;
+				dragFrom = 0;
+				list.el.addClass('dragged').css('-webkit-transform', 'scale(1.05)');
+			}
 		})
 		.tap(function(e){
 			if (list.todos.length > 0) list.renderView().appendTo('#wrapper');
+		})
+		.bind('touchend touchcancel', function(e){
+			
+			window.inAction = false;
+			
+			list.el.removeClass('drag').css('-webkit-transform', 'translate3d(0,0,0)');
+			touch = {};
+			$('#cross, #check').css('opacity', 0);
+			
+			if (swiping) {
+				swiping = false;
+			}
+			
+			if (dragging) {
+				e.stopPropagation();
+				dragging = false;
+				list.el.removeClass('dragged');
+				var newIndex = dragFrom/60 + list.index,
+					lists = list.home.lists;
+				lists.splice(list.index, 1);
+				lists.splice(newIndex, 0, list);
+				list.home.reset();
+			}
+			
 		});
+		
+		//edit
 		list.el.find('.name').tap(function(e){
 			e.stopPropagation();
 			list.el.siblings().css('opacity', .3);
@@ -277,6 +363,7 @@ List.prototype = {
 				$(this).replaceWith(this.value);
 			}));
 		});
+		
 		return list.el;
 	},
 	renderView: function () {
@@ -290,7 +377,7 @@ List.prototype = {
 		list.view = $(templates.ListView())
 		.bind('touchstart', function (e) {
 			if (e.touches.length == 2) {
-				window.nodrag = true;
+				window.inAction = true;
 				var dx = e.touches[0].pageX - e.touches[1].pageX,
 					dy = e.touches[0].pageY - e.touches[1].pageY;
 				odist = dx*dx + dy*dy;
@@ -326,7 +413,7 @@ List.prototype = {
 		})
 		.bind('touchend touchcancel', function (e) {
 			if (e.touches.length == 0) {
-				window.nodrag = false;
+				window.inAction = false;
 				odist = 0;
 				triggered = false;
 			}
@@ -435,14 +522,14 @@ $(function(){
 	//setup scrolling
 	$(document)
 	.bind('touchmove', function(e){
-		if (window.nodrag) {
+		if (window.inAction) {
 			e.preventDefault();
 		} else {
-			window.swipeLock = true;
+			window.globalDrag = true;
 		}
 	})
 	.bind('touchend touchcancel', function(e){
-		window.swipeLock = false;
+		window.globalDrag = false;
 	});
 	
 	var home = new Home([
