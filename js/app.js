@@ -72,7 +72,7 @@ Todo.prototype = {
 		})
 		.bind('touchmove', function(e) {
 			
-			if (!window.globalDrag && !window.editing && e.touches.length == 1) {
+			if (!window.globalDrag && !window.editing && !window.draggingDown && e.touches.length == 1) {
 				
 				dx = e.touches[0].pageX - touch.x1;
 				dy = e.touches[0].pageY - touch.y1;
@@ -141,12 +141,12 @@ Todo.prototype = {
 			}
 		})
 		.bind('swipeLeft', function(e){ //DELETE
-			if (!window.globalDrag && !window.editing) {
+			if (!window.globalDrag && !window.editing && !window.draggingDown) {
 				todo.destroy();
 			}
 		})
 		.bind('swipeRight', function(e){ //DONE
-			if (!window.globalDrag && !window.editing) {
+			if (!window.globalDrag && !window.editing && !window.draggingDown) {
 				if (!todo.done) {
 					todo.done = true;
 					var dy = (todo.list.todos.length - 1) * 60 - todo.el.get(0).offsetTop;
@@ -294,7 +294,7 @@ List.prototype = {
 			}
 		})
 		.bind('touchmove', function(e) {
-			if (!window.globalDrag && !window.editing && e.touches.length == 1) {
+			if (e.touches.length == 1 && !window.globalDrag && !window.editing && !window.draggingDown) {
 				
 				var dx = e.touches[0].pageX - touch.x1,
 					dy = e.touches[0].pageY - touch.y1;
@@ -348,7 +348,7 @@ List.prototype = {
 			}
 		})
 		.bind('swipeLeft', function(e){
-			if (!window.globalDrag && !window.editing) {
+			if (!window.globalDrag && !window.editing && !window.draggingDown) {
 				var l = list.count();
 				if (l != 0) {
 					if (confirm('This list contains ' + l + ' items. Are you sure you want to delete it?')) {
@@ -364,7 +364,7 @@ List.prototype = {
 			}
 		})
 		.bind('swipeRight', function(e){
-			if (!window.globalDrag && !window.editing && list.count() > 0) {
+			if (!window.globalDrag && !window.editing && !window.draggingDown && list.count() > 0) {
 				if (confirm('Are you sure you want to complete all your items in this list?')) {
 					$.each(list.todos, function(i, t) {
 						t.done = true;
@@ -376,7 +376,7 @@ List.prototype = {
 			}
 		})
 		.bind('longTap', function(e){
-			if (!swiping && !window.globalDrag && !window.editing) {
+			if (!swiping && !window.globalDrag && !window.editing && !window.draggingDown) {
 				dragging = true;
 				dragFrom = 0;
 				list.el.addClass('dragged').css('-webkit-transform', 'scale(1.05)');
@@ -498,7 +498,7 @@ List.prototype = {
 				touch.dx = e.touches[0].pageX - touch.x1;
 				touch.dy = e.touches[0].pageY - touch.y1;
 				
-				if (window.innerHeight <= 356 && touch.dy > 0 && !window.inAction) {          //DRAGGING DOWN
+				if (window.innerHeight <= 360 && !window.inAction) {          //DRAGGING DOWN
 					if (!window.draggingDown) {
 						newTopTodo = $(templates.newTodo('top')).addClass('drag').prependTo(list.view);
 						list.view.addClass('drag');
@@ -712,65 +712,69 @@ Home.prototype = {
 			touch.y1 = e.touches[0].pageY;
 		})
 		.bind('touchmove', function (e) {
-			touch.dx = e.touches[0].pageX - touch.x1;
-			touch.dy = e.touches[0].pageY - touch.y1;
-			if (window.innerHeight <= 356 && touch.dy > 0 && !window.inAction) {       //DRAGGING DOWN
-				if (!window.draggingDown) {
-					newTopList = $(templates.newList('top')).addClass('drag').prependTo(home.el);
-					home.el.addClass('drag');
-					window.draggingDown = true;
-				}
-				var d = touch.dy * .4;
-				home.el.css({
-					'-webkit-transform':'translate3d(0,' + (d >= 60 ? d - 60 : d) + 'px,0)',
-					'top': d >= 60 ? '60px' : '0'
-				});
-				if (newTopList) {
-					newTopList.css({
-						'-webkit-transform': 'rotateX('+ Math.max((1-d/60)*85, 0) +'deg)',
-						'opacity': d/60*.7 + .3
+			if (e.touches.length == 1) {
+				touch.dx = e.touches[0].pageX - touch.x1;
+				touch.dy = e.touches[0].pageY - touch.y1;
+				if (window.innerHeight <= 360 && !window.inAction) {       //DRAGGING DOWN
+					if (!window.draggingDown) {
+						newTopList = $(templates.newList('top')).addClass('drag').prependTo(home.el);
+						home.el.addClass('drag');
+						window.draggingDown = true;
+					}
+					var d = touch.dy * .4;
+					home.el.css({
+						'-webkit-transform':'translate3d(0,' + (d >= 60 ? d - 60 : d) + 'px,0)',
+						'top': d >= 60 ? '60px' : '0'
 					});
-					newTopList.find('input').val(d >= 60 ? 'Release to create item' : 'Pull to create item' );
+					if (newTopList) {
+						newTopList.css({
+							'-webkit-transform': 'rotateX('+ Math.max((1-d/60)*85, 0) +'deg)',
+							'opacity': d/60*.7 + .3
+						});
+						newTopList.find('input').val(d >= 60 ? 'Release to create item' : 'Pull to create item' );
+					}
 				}
 			}
 		})
 		.bind('touchend touchcancel', function(){
-			window.draggingDown = false;
-			if (touch.dy*.4 >= 60 && newTopList) {
-				newTopList.siblings().addClass('medium').css('opacity',.3);
-				newTopList.find('input').val('').focus()
-				.bind('blur', function(){
-					window.editing = false;
-					var name = this.value;
-					newTopList.siblings().css('opacity',1);
-					if (!name) {
-						newTopList.removeClass('drag').addClass('medium').css('-webkit-transform','translate3d(-'+ window.innerWidth +'px,0,0)');
+			if (window.draggingDown) {
+				window.draggingDown = false;
+				if (touch.dy*.4 >= 60 && newTopList) {
+					newTopList.siblings().addClass('medium').css('opacity',.3);
+					newTopList.find('input').val('').focus()
+					.bind('blur', function(){
+						window.editing = false;
+						var name = this.value;
+						newTopList.siblings().css('opacity',1);
+						if (!name) {
+							newTopList.removeClass('drag').addClass('medium').css('-webkit-transform','translate3d(-'+ window.innerWidth +'px,0,0)');
+							setTimeout(function(){
+								newTopList.css('height', 0);
+							}, 250);
+							setTimeout(function(){
+								home.reset();
+							}, 500);
+						} else {
+							var newList = new List(name,[]);
+							home.lists.unshift(newList);
+							setTimeout(function(){
+								home.reset();
+							}, 250);
+						}
+					});
+					window.editing = true;
+				} else {
+					if (newTopList) {
+						newTopList.removeClass('drag').addClass('fast').css('-webkit-transform','rotateX(85deg)');
 						setTimeout(function(){
-							newTopList.css('height', 0);
-						}, 250);
-						setTimeout(function(){
-							home.reset();
-						}, 500);
-					} else {
-						var newList = new List(name,[]);
-						home.lists.unshift(newList);
-						setTimeout(function(){
-							home.reset();
-						}, 250);
+							newTopList.remove();
+							newTopList = null;
+						}, 150);
 					}
-				});
-				window.editing = true;
-			} else {
-				if (newTopList) {
-					newTopList.removeClass('drag').addClass('fast').css('-webkit-transform','rotateX(85deg)');
-					setTimeout(function(){
-						newTopList.remove();
-						newTopList = null;
-					}, 150);
 				}
+				home.el.removeClass('drag').css('-webkit-transform','translate3d(0,0,0)');
+				touch = {};
 			}
-			home.el.removeClass('drag').css('-webkit-transform','translate3d(0,0,0)');
-			touch = {};
 		})
 		.bind('tap', function(e){
 			//create new list at the end
@@ -880,7 +884,7 @@ $(function(){
 	//setup scrolling
 	$(document)
 	.bind('touchmove', function(e){
-		if (window.inAction || window.editing || window.draggingDown || document.height < 356) {
+		if (window.inAction || window.editing || window.draggingDown || document.height <= 360) {
 			e.preventDefault();
 		} else {
 			window.globalDrag = true;
