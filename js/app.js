@@ -239,8 +239,8 @@ Todo.prototype = {
 		
 		//edit
 		todo.el.find('.name').tap(function(e){
-			if (!window.editing) {
-				e.stopPropagation();
+			e.cancelBubble = true;
+			if (!window.editing && !window.inAction && !window.globalDragging && !window.draggingDown) {
 				todo.el.siblings().css('opacity', .3);
 				var oname = $(this).text();
 				window.editing = true;
@@ -414,8 +414,8 @@ List.prototype = {
 		
 		//edit
 		list.el.find('.name').tap(function(e){
-			if (!window.editing) {
-				e.stopPropagation();
+			e.cancelBubble = true;
+			if (!window.editing && !window.inAction && !window.globalDragging && !window.draggingDown) {
 				list.el.siblings().css('opacity', .3);
 				var oname = $(this).text();
 				window.editing = true;
@@ -457,7 +457,7 @@ List.prototype = {
 				window.inAction = true;
 				var dx = e.touches[0].pageX - e.touches[1].pageX,
 					dy = e.touches[0].pageY - e.touches[1].pageY;
-				odist = dx*dx + dy*dy;
+				odist = Math.sqrt(dx*dx + dy*dy);
 				pinchY = (e.touches[0].pageY + e.touches[1].pageY) / 2;
 			} else if (e.touches.length == 1) {
 				touch.x1 = e.touches[0].pageX;
@@ -466,12 +466,12 @@ List.prototype = {
 		})
 		.bind('touchmove', function (e) {
 			
-			if (!triggered && e.touches.length == 2) {
+			if (!triggered && e.touches.length == 2 && !window.globalDragging) {
 				
 				var dx = e.touches[0].pageX - e.touches[1].pageX,
 					dy = e.touches[0].pageY - e.touches[1].pageY,
-					dist = dx*dx + dy*dy;
-				if (odist - dist > 50) {                           //PINCH IN
+					dist = Math.sqrt(dx*dx + dy*dy);
+				if (odist - dist > 80) {                           //PINCH IN
 					list.home.reset();
 					list.home.el.addClass('slow').css({
 						'-webkit-transform': 'translate3d(0,0,0)',
@@ -493,12 +493,12 @@ List.prototype = {
 					triggered = true;
 				}
 				
-			} else if (e.touches.length == 1) {
+			} else if (e.touches.length == 1 && !window.globalDragging) {
 				
 				touch.dx = e.touches[0].pageX - touch.x1;
 				touch.dy = e.touches[0].pageY - touch.y1;
 				
-				if (window.innerHeight <= 360 && !window.inAction) {          //DRAGGING DOWN
+				if (window.innerHeight <= 356 && touch.dy > 0 && !window.inAction) {          //DRAGGING DOWN
 					if (!window.draggingDown) {
 						newTopTodo = $(templates.newTodo('top')).addClass('drag').prependTo(list.view);
 						list.view.addClass('drag');
@@ -670,9 +670,10 @@ List.prototype = {
 		}
 	},
 	refreshView: function () {
-		var list = this;
-		list.view.find('.todo:not(.done)').each(function(i){
-			$(this).css('background-color','hsl(' + (353+i*10)%360 + ',95%,' + (i==0 ? '48%':'53%') + ')');
+		var list = this,
+			dones = list.view.find('.todo:not(.done)');
+		dones.each(function(i){
+			$(this).css('background-color','hsl(' + (353+i*Math.min(70/dones.length,10)) + ',95%,' + (i==0 ? '48%':'53%') + ')');
 		});
 	},
 	destroy: function () {
@@ -712,10 +713,10 @@ Home.prototype = {
 			touch.y1 = e.touches[0].pageY;
 		})
 		.bind('touchmove', function (e) {
-			if (e.touches.length == 1) {
+			if (e.touches.length == 1 && !window.globalDragging) {
 				touch.dx = e.touches[0].pageX - touch.x1;
 				touch.dy = e.touches[0].pageY - touch.y1;
-				if (window.innerHeight <= 360 && !window.inAction) {       //DRAGGING DOWN
+				if (window.innerHeight <= 356 && touch.dy > 0 && !window.inAction) {       //DRAGGING DOWN
 					if (!window.draggingDown) {
 						newTopList = $(templates.newList('top')).addClass('drag').prependTo(home.el);
 						home.el.addClass('drag');
@@ -845,7 +846,7 @@ Home.prototype = {
 	refresh: function () {
 		var home = this;
 		home.el.find('.list').each(function(i){
-			$(this).css('background-color','hsl(' + (212-i*3)%360 + ', 100%, 53%)');
+			$(this).css('background-color','hsl(' + (212-i*3) + ', 100%, 53%)');
 		});
 	},
 	resetIcons: function(el) {
@@ -884,7 +885,7 @@ $(function(){
 	//setup scrolling
 	$(document)
 	.bind('touchmove', function(e){
-		if (window.inAction || window.editing || window.draggingDown || document.height <= 360) {
+		if (window.inAction || window.editing || window.draggingDown || document.height <= 356) {
 			e.preventDefault();
 		} else {
 			window.globalDrag = true;
