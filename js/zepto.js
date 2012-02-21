@@ -1370,7 +1370,7 @@ window.Zepto = Zepto;
   function longTap(){
     if (touch.last && (Date.now() - touch.last >= longTapDelay)) {
       $(touch.target).trigger('longTap');
-      //touch = {};
+      touch = {};
     }
   }
 

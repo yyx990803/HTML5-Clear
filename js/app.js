@@ -61,6 +61,7 @@ Todo.prototype = {
 				if (Math.abs(dy) < 6 && Math.abs(dx) > 0 && !swiping && !dragging) {
 					swiping = true;
 					window.inAction = true;
+					e.stopPropagation();
 					todo.el.addClass('drag');
 					list.home.resetIcons(todo.el);
 				}
@@ -109,8 +110,9 @@ Todo.prototype = {
 					todo.el.css('-webkit-transform', 'translate3d(0,' + (dy - dragFrom) + 'px, 0) scale(1.05)');
 					if (dy - dragFrom < - 30 || dy - dragFrom > + 30) {
 						var step = Math[dy > 0 ? 'ceil':'floor'](dy/60),
-							newDragFrom = step * 60;
-						if (dragFrom != newDragFrom) {
+							newDragFrom = step * 60,
+							targetStep = todo.index + step;
+						if (dragFrom != newDragFrom && targetStep >= 0 && targetStep < todo.list.todos.length) {
 							var target = $(todo.list.view.find('li.todo').get(todo.index + step));
 							target[newDragFrom > dragFrom ? 'after':'before'](todo.el);
 							dragFrom = newDragFrom;
@@ -191,14 +193,25 @@ Todo.prototype = {
 				}
 				
 				if (dragging) {
+					
 					e.stopPropagation();
 					dragging = false;
 					todo.el.removeClass('dragged');
+					
 					var newIndex = dragFrom/60 + todo.index,
-						todos = todo.list.todos;
+						todos = todo.list.todos,
+						undones = todo.list.count();
 					todos.splice(todo.index, 1);
 					todos.splice(newIndex, 0, todo);
-					todo.list.resetView();
+					
+					if (todo.done) {
+						if (newIndex < undones) todo.done = false;
+					} else if (undones < todo.list.todos.length && newIndex > undones - 1) {
+						todo.done = true;
+					}
+					setTimeout(function(){
+						todo.list.resetView();
+					}, 150);
 				}
 				
 			}
@@ -253,14 +266,17 @@ List.prototype = {
 		})
 		.bind('touchmove', function(e) {
 			if (!window.globalDrag && e.touches.length == 1) {
+				
 				var dx = e.touches[0].pageX - touch.x1,
 					dy = e.touches[0].pageY - touch.y1;
+					
 				if (Math.abs(dy) < 6 && Math.abs(dx) > 0 && !swiping && !dragging) {
 					swiping = true;
 					window.inAction = true;
 					list.el.addClass('drag');
 					home.resetIcons(list.el);
 				}
+				
 				if (swiping) {
 					if (dx > 0 && dx < w) {
 						$('#check').css('opacity', dx/w);
@@ -290,7 +306,10 @@ List.prototype = {
 					if (dy - dragFrom < - 30 || dy - dragFrom > + 30) {
 						var step = Math[dy > 0 ? 'ceil':'floor'](dy/60),
 							newDragFrom = step * 60;
-						if (dragFrom != newDragFrom) {
+							targetStep = list.index + step;
+							console.log(list.index);
+							console.log(step);
+						if (dragFrom != newDragFrom && targetStep > -1 && targetStep < list.home.lists.length) {
 							var target = $(list.home.el.find('li.list').get(list.index + step));
 							target[ newDragFrom > dragFrom ? 'after':'before'](list.el);
 							dragFrom = newDragFrom;
@@ -310,6 +329,7 @@ List.prototype = {
 			}
 		})
 		.swipeRight(function(e){
+			console.log("right");
 			if (!window.globalDrag && list.count() > 0 && confirm('Are you sure you want to complete all your items in this list?')) {
 				$.each(list.todos, function(i, t) {
 					t.done = true;
@@ -340,14 +360,15 @@ List.prototype = {
 			}
 			
 			if (dragging) {
-				e.stopPropagation();
 				dragging = false;
 				list.el.removeClass('dragged');
 				var newIndex = dragFrom/60 + list.index,
 					lists = list.home.lists;
 				lists.splice(list.index, 1);
 				lists.splice(newIndex, 0, list);
-				list.home.reset();
+				setTimeout(function(){
+					list.home.reset();
+				}, 150);
 			}
 			
 		});
@@ -372,6 +393,7 @@ List.prototype = {
 		
 		var list = this,
 			odist = 0,
+			pinchY = {},
 			triggered = false;
 		
 		list.view = $(templates.ListView())
@@ -381,6 +403,7 @@ List.prototype = {
 				var dx = e.touches[0].pageX - e.touches[1].pageX,
 					dy = e.touches[0].pageY - e.touches[1].pageY;
 				odist = dx*dx + dy*dy;
+				pinchY = (e.touches[0].pageY + e.touches[1].pageY) / 2;
 			}
 		})
 		.bind('touchmove', function (e) {
@@ -389,6 +412,7 @@ List.prototype = {
 					dy = e.touches[0].pageY - e.touches[1].pageY,
 					dist = dx*dx + dy*dy;
 				if (odist - dist > 50) {                           //PINCH IN
+					list.home.reset();
 					list.home.el.addClass('slow').css({
 						'-webkit-transform': 'translate3d(0,0,0)',
 						'opacity': 1
@@ -401,12 +425,11 @@ List.prototype = {
 					});
 					setTimeout(function(){
 						list.home.el.removeClass('slow');
-						list.home.reset();
 						list.view.remove();
 					}, 350);
 					triggered = true;
 				} else if (odist - dist < -50) {                   //PINCH OUT
-					
+					console.log(pinchY);
 					triggered = true;
 				}
 			}
@@ -537,8 +560,9 @@ $(function(){
 			new Todo('Swipe right to complete'),
 			new Todo('Swipe left to delete'),
 			new Todo('Tap on text to edit'),
+			new Todo('Long tap to change order'),
 			new Todo('Drag down to add new'),
-			new Todo('Pinch to go back.')
+			new Todo('Pinch in to go back.')
 		]),
 		new List('This is a demo', [
 			new Todo('Built with HTML5'),
