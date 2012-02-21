@@ -15,4 +15,4 @@ As I love the design of the original app, I decided to redo it in HTML5. It's no
 Why didn't you use frameworks like A/B/C?
 ===
 
-Again, mainly because I wanted to practice... I wanted to get the look and feel fast and dirty, so I just did it without much planning ahead. The code is quite messy, and refactoring in the future might be good practice too.
+I just wanted to play with the look and feel, so I just did it fast and dirty. The code is quite messy, and refactoring in the future might be good practice too.
