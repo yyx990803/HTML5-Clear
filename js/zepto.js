@@ -1368,9 +1368,9 @@ window.Zepto = Zepto;
 
   var longTapDelay = 650;
   function longTap(){
-    if (touch.last && (Date.now() - touch.last >= longTapDelay)) {
-      $(touch.target).trigger('longTap');
-      touch = {};
+    if (touch.last && (Date.now() - touch.last >= longTapDelay) && (!touch.x2 || (Math.abs(touch.x2 - touch.x1) < 5 && Math.abs(touch.y2 - touch.y1) < 5))) {
+        $(touch.target).trigger('longTap');
+		touch = {};
     }
   }
 
@@ -1381,12 +1381,14 @@ window.Zepto = Zepto;
       touchTimeout && clearTimeout(touchTimeout);
       touch.x1 = e.touches[0].pageX;
       touch.y1 = e.touches[0].pageY;
+	  touch.x2 = 0;
+	  touch.y2 = 0;
       if (delta > 0 && delta <= 250) touch.isDoubleTap = true;
       touch.last = now;
       setTimeout(longTap, longTapDelay);
     }).bind('touchmove', function(e){
-      touch.x2 = e.touches[0].pageX;
-      touch.y2 = e.touches[0].pageY;
+      	touch.x2 = e.touches[0].pageX;
+      	touch.y2 = e.touches[0].pageY;
     }).bind('touchend', function(e){
       if (touch.isDoubleTap) {
         $(touch.target).trigger('doubleTap');
@@ -1395,7 +1397,7 @@ window.Zepto = Zepto;
         (Math.abs(touch.x1 - touch.x2) > 55 || Math.abs(touch.y1 - touch.y2) > 55)  &&
           $(touch.target).trigger('swipe') &&
           $(touch.target).trigger('swipe' + (swipeDirection(touch.x1, touch.x2, touch.y1, touch.y2)));
-        touch.x1 = touch.x2 = touch.y1 = touch.y2 = touch.last = 0;
+          touch.x1 = touch.x2 = touch.y1 = touch.y2 = touch.last = 0;
       } else if ('last' in touch) {
         touchTimeout = setTimeout(function(){
           touchTimeout = null;

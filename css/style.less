@@ -23,7 +23,7 @@ a {
 
 #wrapper {
 	overflow-x: hidden;
-	overflow-y: auto;
+	overflow-y: scroll;
 }
 
 #check, #cross {
@@ -51,9 +51,18 @@ a {
 	height: 100%;
 	top: 0;
 	left: 0;
-	-webkit-transition: all .15s ease;
-	-webkit-perspective: 0;
+	-webkit-transition: -webkit-transform .15s ease, opacity .15s ease;
+	-webkit-perspective: 1000;
 	-webkit-backface-visibility: hidden;
+	li.addmore {
+		line-height: 60px;
+		text-align: center;
+		font-weight: bold;
+		font-size: 18px;
+		color: #ccc;
+		z-index: 0;
+		margin-bottom: -60px;
+	}
 }
 
 #home {
@@ -93,6 +102,7 @@ a {
 			background-color: #fff;
 			left: 0;
 			top: 52%;
+			-webkit-user-select: none;
 			-webkit-perspective: 0;
 			-webkit-backface-visibility: hidden;
 			-webkit-transform-origin: 0%;
@@ -107,6 +117,9 @@ a {
 		font-size: 18px;
 		font-weight: bold;
 		padding: 0;
+		margin: 0;
+		position: relative;
+		left: -1px;
 	}
 }
 

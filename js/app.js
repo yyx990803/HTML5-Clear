@@ -19,6 +19,25 @@ var templates = {
 		+ '<div class="inner">'
 		+ '<div class="name">' + todo.name + '<span></span></div>'
 		+ '</div></li>';
+	},
+	newList: function (pos) {
+		return '<li class="list '+ pos +'">'
+		+ '<div class="inner">'
+		+ '<div class="name"><input type="text" value="' + (pos == 'top' ? 'Pull to create item' : 'Tap me') + '"/></div>'
+		+ '<div class="count">0</div>'
+		+ '</div></li>'
+	},
+	newTodo: function (pos) {
+		return '<li class="todo '+ pos +'">'
+		+ '<div class="inner">'
+		+ '<div class="name"><input type="text" value="' + (pos == 'top' ? 'Pull to create item' : 'Tap me') + '"/></div>'
+		+ '</div></li>'
+	},
+	emptyListView: function() {
+		return '<li class="addmore">Tap to add new todo</li>';
+	},
+	emptyHome: function() {
+		return '<li class="addmore">Tap to add a new List</li>';
 	}
 };
 
@@ -46,14 +65,14 @@ Todo.prototype = {
 		var line = todo.el.find('span');
 		
 		todo.el.bind('touchstart', function(e){
-			if (e.touches.length == 1) {
+			if (e.touches.length == 1 && !window.editing) {
 				touch.x1 = e.touches[0].pageX;
 				touch.y1 = e.touches[0].pageY;
 			}
 		})
 		.bind('touchmove', function(e) {
 			
-			if (!window.globalDrag && e.touches.length == 1) {
+			if (!window.globalDrag && !window.editing && e.touches.length == 1) {
 				
 				dx = e.touches[0].pageX - touch.x1;
 				dy = e.touches[0].pageY - touch.y1;
@@ -61,7 +80,6 @@ Todo.prototype = {
 				if (Math.abs(dy) < 6 && Math.abs(dx) > 0 && !swiping && !dragging) {
 					swiping = true;
 					window.inAction = true;
-					e.stopPropagation();
 					todo.el.addClass('drag');
 					list.home.resetIcons(todo.el);
 				}
@@ -109,27 +127,26 @@ Todo.prototype = {
 					window.inAction = true;
 					todo.el.css('-webkit-transform', 'translate3d(0,' + (dy - dragFrom) + 'px, 0) scale(1.05)');
 					if (dy - dragFrom < - 30 || dy - dragFrom > + 30) {
-						var step = Math[dy > 0 ? 'ceil':'floor'](dy/60),
-							newDragFrom = step * 60,
-							targetStep = todo.index + step;
-						if (dragFrom != newDragFrom && targetStep >= 0 && targetStep < todo.list.todos.length) {
+						var step = Math[dy > 0 ? 'ceil':'floor']((dy > 0 ? dy - 30 : dy + 30)/60),
+							newDragFrom = step * 60;
+						if (dragFrom != newDragFrom && todo.index + step >= 0 && todo.index + step < todo.list.todos.length) {
 							var target = $(todo.list.view.find('li.todo').get(todo.index + step));
 							target[newDragFrom > dragFrom ? 'after':'before'](todo.el);
 							dragFrom = newDragFrom;
-							todo.el.css('-webkit-transform', 'translate3d(0,' + (dy - dragFrom) + 'px, 0) scale(1.05)'); //update position immediately
+							todo.el.css('-webkit-transform', 'translate3d(0,' + (dy - dragFrom) + 'px, 0) scale(1.05)');
 						}
 					}
 				}
 				
 			}
 		})
-		.swipeLeft(function(){ //DELETE
-			if (!window.globalDrag) {
+		.bind('swipeLeft', function(e){ //DELETE
+			if (!window.globalDrag && !window.editing) {
 				todo.destroy();
 			}
 		})
-		.swipeRight(function(){ //DONE
-			if (!window.globalDrag) {
+		.bind('swipeRight', function(e){ //DONE
+			if (!window.globalDrag && !window.editing) {
 				if (!todo.done) {
 					todo.done = true;
 					var dy = (todo.list.todos.length - 1) * 60 - todo.el.get(0).offsetTop;
@@ -166,12 +183,15 @@ Todo.prototype = {
 				}
 			}
 		})
-		.longTap(function(){
-			if (!swiping) {
+		.bind('longTap', function(e){
+			if (!swiping && !window.editing) {
 				dragging = true;
 				dragFrom = 0;
 				todo.el.addClass('dragged').css('-webkit-transform', 'scale(1.05)');
 			}
+		})
+		.bind('tap', function(e){
+			e.cancelBubble = true;
 		})
 		.bind('touchend touchcancel', function(e){
 			if (e.touches.length == 0) {
@@ -219,20 +239,29 @@ Todo.prototype = {
 		
 		//edit
 		todo.el.find('.name').tap(function(e){
-			e.stopPropagation();
-			todo.el.siblings().css('opacity', .3);
-			var oname = $(this).text();
-			$(this).html($('<input type="text" value="' + oname + '"/>').blur(function(){
-				todo.el.siblings().css('opacity', 1);
-				todo.name = this.value;
-				todo.list.resetView();
-			}));
+			if (!window.editing) {
+				e.stopPropagation();
+				todo.el.siblings().css('opacity', .3);
+				var oname = $(this).text();
+				window.editing = true;
+				$(this).html($('<input type="text" value="' + oname + '"/>').blur(function(){
+					todo.el.siblings().css('opacity', 1);
+					window.editing = false;
+					var name = this.value;
+					if (!name) {
+						todo.destroy();
+					} else {
+						todo.name = name;
+						$(this).replaceWith(name);
+					}
+				}));
+			}
 		});
 		return todo.el;
 	},
 	destroy: function () {
 		var todo = this;
-		todo.el.addClass('medium').css('-webkit-transform', 'translate3d(' + (-window.innerWidth) + 'px, 0, 0)');
+		todo.el.addClass('medium').css('-webkit-transform', 'translate3d(-' + window.innerWidth + 'px, 0, 0)');
 		setTimeout(function(){ todo.el.css('height', 0); }, 250);
 		setTimeout(function(){
 			todo.el.remove();
@@ -259,13 +288,13 @@ List.prototype = {
 			w = 55;
 		list.el = $(templates.List(list))
 		.bind('touchstart', function(e){
-			if (e.touches.length == 1) {
+			if (e.touches.length == 1 && !window.editing) {
 				touch.x1 = e.touches[0].pageX;
 				touch.y1 = e.touches[0].pageY;
 			}
 		})
 		.bind('touchmove', function(e) {
-			if (!window.globalDrag && e.touches.length == 1) {
+			if (!window.globalDrag && !window.editing && e.touches.length == 1) {
 				
 				var dx = e.touches[0].pageX - touch.x1,
 					dy = e.touches[0].pageY - touch.y1;
@@ -303,49 +332,59 @@ List.prototype = {
 				if (dragging) {
 					window.inAction = true;
 					list.el.css('-webkit-transform', 'translate3d(0,' + (dy - dragFrom) + 'px, 0) scale(1.05)');
-					if (dy - dragFrom < - 30 || dy - dragFrom > + 30) {
-						var step = Math[dy > 0 ? 'ceil':'floor'](dy/60),
+					if (dy - dragFrom < -30 || dy - dragFrom > 30) {
+						var step = Math[dy > 0 ? 'ceil':'floor']((dy > 0 ? dy - 30 : dy + 30)/60),
 							newDragFrom = step * 60;
-							targetStep = list.index + step;
-							console.log(list.index);
-							console.log(step);
-						if (dragFrom != newDragFrom && targetStep > -1 && targetStep < list.home.lists.length) {
+						if (newDragFrom != dragFrom && list.index + step >= 0 && ((list.index + step) < list.home.lists.length)) {
 							var target = $(list.home.el.find('li.list').get(list.index + step));
 							target[ newDragFrom > dragFrom ? 'after':'before'](list.el);
 							dragFrom = newDragFrom;
 							list.el.css('-webkit-transform', 'translate3d(0,' + (dy - dragFrom) + 'px, 0) scale(1.05)');
+							
 						}
 					}
 				}
 				
 			}
 		})
-		.swipeLeft(function(e){
-			if (!window.globalDrag) {
+		.bind('swipeLeft', function(e){
+			if (!window.globalDrag && !window.editing) {
 				var l = list.count();
-				if ((l > 0 && confirm('This list contains ' + l + ' items. Are you sure you want to delete it?')) || l == 0) {
+				if (l != 0) {
+					if (confirm('This list contains ' + l + ' items. Are you sure you want to delete it?')) {
+						list.destroy();
+					} else {
+						setTimeout(function(){
+							list.home.reset();
+						}, 100);
+					}
+				} else {
 					list.destroy();
 				}
 			}
 		})
-		.swipeRight(function(e){
-			console.log("right");
-			if (!window.globalDrag && list.count() > 0 && confirm('Are you sure you want to complete all your items in this list?')) {
-				$.each(list.todos, function(i, t) {
-					t.done = true;
-				});
-				list.refreshSelf();
+		.bind('swipeRight', function(e){
+			if (!window.globalDrag && !window.editing && list.count() > 0) {
+				if (confirm('Are you sure you want to complete all your items in this list?')) {
+					$.each(list.todos, function(i, t) {
+						t.done = true;
+					});
+				}
+				setTimeout(function(){
+					list.home.reset();
+				}, 100);
 			}
 		})
-		.longTap(function(e){
-			if (!swiping) {
+		.bind('longTap', function(e){
+			if (!swiping && !window.globalDrag && !window.editing) {
 				dragging = true;
 				dragFrom = 0;
 				list.el.addClass('dragged').css('-webkit-transform', 'scale(1.05)');
 			}
 		})
-		.tap(function(e){
-			if (list.todos.length > 0) list.renderView().appendTo('#wrapper');
+		.bind('tap', function(e){
+			e.cancelBubble = true;
+			if (!window.editing) list.renderView().appendTo('#wrapper');
 		})
 		.bind('touchend touchcancel', function(e){
 			
@@ -375,14 +414,28 @@ List.prototype = {
 		
 		//edit
 		list.el.find('.name').tap(function(e){
-			e.stopPropagation();
-			list.el.siblings().css('opacity', .3);
-			var oname = $(this).text();
-			$(this).html($('<input type="text" value="' + oname + '"/>').blur(function(){
-				list.el.siblings().css('opacity', 1);
-				list.name = this.value;
-				$(this).replaceWith(this.value);
-			}));
+			if (!window.editing) {
+				e.stopPropagation();
+				list.el.siblings().css('opacity', .3);
+				var oname = $(this).text();
+				window.editing = true;
+				$(this).html($('<input type="text" value="' + oname + '"/>').blur(function(){
+					window.editing = false;
+					list.el.siblings().css('opacity', 1);
+					var name = this.value;
+					if (!name) {
+						var l = list.count();
+						if (l == 0 || confirm('This list contains ' + l + ' items. Are you sure you want to delete it?')) {
+							list.destroy();
+						} else {
+							$(this).replaceWith(oname);
+						}
+					} else {
+						list.name = name;
+						$(this).replaceWith(name);
+					}
+				}));
+			}
 		});
 		
 		return list.el;
@@ -394,7 +447,9 @@ List.prototype = {
 		var list = this,
 			odist = 0,
 			pinchY = {},
-			triggered = false;
+			triggered = false,
+			touch = {},
+			newTopTodo;
 		
 		list.view = $(templates.ListView())
 		.bind('touchstart', function (e) {
@@ -404,10 +459,15 @@ List.prototype = {
 					dy = e.touches[0].pageY - e.touches[1].pageY;
 				odist = dx*dx + dy*dy;
 				pinchY = (e.touches[0].pageY + e.touches[1].pageY) / 2;
+			} else if (e.touches.length == 1) {
+				touch.x1 = e.touches[0].pageX;
+				touch.y1 = e.touches[0].pageY;
 			}
 		})
 		.bind('touchmove', function (e) {
+			
 			if (!triggered && e.touches.length == 2) {
+				
 				var dx = e.touches[0].pageX - e.touches[1].pageX,
 					dy = e.touches[0].pageY - e.touches[1].pageY,
 					dist = dx*dx + dy*dy;
@@ -429,62 +489,191 @@ List.prototype = {
 					}, 350);
 					triggered = true;
 				} else if (odist - dist < -50) {                   //PINCH OUT
-					console.log(pinchY);
+					//console.log(pinchY);
 					triggered = true;
+				}
+				
+			} else if (e.touches.length == 1) {
+				
+				touch.dx = e.touches[0].pageX - touch.x1;
+				touch.dy = e.touches[0].pageY - touch.y1;
+				
+				if (window.innerHeight <= 356 && touch.dy > 0 && !window.inAction) {          //DRAGGING DOWN
+					if (!window.draggingDown) {
+						newTopTodo = $(templates.newTodo('top')).addClass('drag').prependTo(list.view);
+						list.view.addClass('drag');
+						window.draggingDown = true;
+					}
+					var d = touch.dy * .4;
+					list.view.css({
+						'-webkit-transform':'translate3d(0,' + (d >= 60 ? d - 60 : d) + 'px,0)',
+						'top': d >= 60 ? '60px' : '0'
+					});
+					if (newTopTodo) {
+						newTopTodo.css({
+							'-webkit-transform': 'rotateX('+ Math.max((1-d/60)*85, 0) +'deg)',
+							'opacity': d/60*.7 + .3
+						});
+						newTopTodo.find('input').val(d >= 60 ? 'Release to create item' : 'Pull to create item' );
+					}
 				}
 			}
 		})
 		.bind('touchend touchcancel', function (e) {
-			if (e.touches.length == 0) {
-				window.inAction = false;
-				odist = 0;
-				triggered = false;
+			
+			window.inAction = false;
+			odist = 0;
+			triggered = false;
+			
+			if (window.draggingDown) {
+				
+				window.draggingDown = false;
+				
+				if (touch.dy*.4 >= 60 && newTopTodo) {
+					
+					newTopTodo.siblings().addClass('medium').css('opacity',.3);
+					newTopTodo.find('input').val('').focus()
+					.bind('blur', function(){
+						window.editing = false;
+						var name = this.value;
+						newTopTodo.siblings().css('opacity',1);
+						if (!name) {
+							newTopTodo.removeClass('drag').addClass('medium').css('-webkit-transform','translate3d(-'+ window.innerWidth +'px,0,0)');
+							setTimeout(function(){
+								newTopTodo.css('height', 0);
+							}, 250);
+							setTimeout(function(){
+								list.resetView();
+							}, 500);
+						} else {
+							var newTodo = new Todo(name);
+							list.todos.unshift(newTodo);
+							setTimeout(function(){
+								list.resetView();
+							}, 250);
+						}
+					});
+					window.editing = true;
+					
+				} else {
+					
+					if (newTopTodo) {
+						newTopTodo.removeClass('drag').addClass('fast').css('-webkit-transform','rotateX(85deg)');
+						setTimeout(function(){
+							newTopTodo.remove();
+							newTopTodo = null;
+						}, 150);
+					}
+					
+				}
+				list.view.removeClass('drag').css('-webkit-transform','translate3d(0,0,0)');
+				touch = {};
 			}
+		})
+		.bind('tap', function (e) {
+			//create new todo at the end
+			
+			if (!window.editing) {
+				
+				window.editing = true;
+			
+				var todos = list.view.find('li.todo');
+				todos.addClass('slow').css('opacity', .3);
+				setTimeout(function(){
+					todos.removeClass('slow');
+				}, 350);
+			
+				var newTodo = $(templates.newTodo('bottom'))
+				.bind('tap', function(e){
+					e.cancelBubble = true;
+				})
+				.addClass('slow')
+				.appendTo(list.view)
+				.css({
+					'background-color':'hsl(' + (353+list.count()*10)+ ', 95%, 53%)',
+					'opacity': 1
+				});
+				
+				newTodo.find('input')
+				.bind('focus', function(){
+					this.value = '';
+				})
+				.bind('blur', function(){
+					window.editing = false;
+					todos.css('opacity', 1);
+					var name = this.value;
+					if (!name) { //cancel
+						newTodo.css('-webkit-transform','translate3d(-'+ window.innerWidth +'px,0,0)');
+						setTimeout(function(){
+							list.resetView();
+						}, 350);
+					} else { //create
+						var dones = list.view.find('li.done');
+						newTodo.css('-webkit-transform','translate3d(0,-'+ (dones.length * 60) +'px,0)');
+						dones.addClass('slow').css('-webkit-transform','translate3d(0,60px,0)');
+						setTimeout(function(){
+							list.todos.splice(list.count(), 0, new Todo(name));
+							list.resetView();
+						}, 350);
+					}
+				});
+			
+				setTimeout(function(){ //this solving transition not working problem, don't know why though
+					newTodo.css('-webkit-transform','rotateX(0deg)');
+				}, 10);
+				
+			}
+			
 		});
 		
-		$.each(list.todos, function(i,todo){
-			var t = todo.render(list, i).css({
-				'z-index':99-i,
-				'-webkit-transform':'translate3d(0,' + (list.el.offset().top - 60 * i) + 'px,0)'
+		if (list.todos.length > 0) {		
+			$.each(list.todos, function(i,todo){
+				var t = todo.render(list, i).css({
+					'z-index':99-i,
+					'-webkit-transform':'translate3d(0,' + (list.el.offset().top - 60 * i) + 'px,0)'
+				});
+				list.view.append(t);
 			});
-			list.view.append(t);
-		});
+			list.refreshView();	
+		} else {
+			list.view.html(templates.emptyListView());
+		}
 		
 		setTimeout(function(){
 			list.home.el.addClass('slow').css({
-				'-webkit-transform': 'translate3d(0,' + (-list.home.el.height()) + 'px,0)',
+				'-webkit-transform': 'translate3d(0,-' + list.home.el.height() + 'px,0)',
 				'opacity': 0
 			});
 			list.view.find('.todo').addClass('slow').css('-webkit-transform','translate3d(0,0,0)');
-		}, 30);
+		}, 10);
+		
 		setTimeout(function(){
 			list.home.el.removeClass('slow');
 			list.resetView();
-		}, 380);
-		list.refreshView();
+		}, 360);
+		
 		return list.view;
 	},
 	resetView: function () {
 		var list = this;
-		list.view.empty();
-		$.each(list.todos, function(i,todo){
-			var t = todo.render(list, i).css({
-				'z-index':99-i
+		if (list.todos.length > 0) {
+			list.view.empty().css('top',0);
+			$.each(list.todos, function(i,todo){
+				var t = todo.render(list, i).css({
+					'z-index':99-i
+				});
+				list.view.append(t);
 			});
-			list.view.append(t);
-		});
-		list.refreshView();
+			list.refreshView();
+		} else {
+			list.view.html(templates.emptyListView());	
+		}
 	},
 	refreshView: function () {
 		var list = this;
 		list.view.find('.todo:not(.done)').each(function(i){
-			$(this).css('background-color','hsl(' + (353+i*10)%360 + ',100%,' + (i==0 ? '48%':'53%') + ')');
+			$(this).css('background-color','hsl(' + (353+i*10)%360 + ',95%,' + (i==0 ? '48%':'53%') + ')');
 		});
-	},
-	refreshSelf: function () {
-		var list = this;
-		list.el.find('.count').html(list.count());
-		list.el.addClass('empty');
 	},
 	destroy: function () {
 		var list = this;
@@ -493,7 +682,7 @@ List.prototype = {
 		setTimeout(function(){
 			list.el.remove();
 			list.home.lists.splice(list.index, 1);
-			list.home.refresh();
+			list.home.reset();
 		}, 500);
 	},
 	count: function () {
@@ -512,18 +701,142 @@ var Home = function (lists) {
 };
 Home.prototype = {
 	render: function () {
-		var home = this;
-		home.el = $(templates.Home());
+		
+		var home = this,
+			touch = {},
+			newTopList;
+			
+		home.el = $(templates.Home())
+		.bind('touchstart', function(e){
+			touch.x1 = e.touches[0].pageX;
+			touch.y1 = e.touches[0].pageY;
+		})
+		.bind('touchmove', function (e) {
+			touch.dx = e.touches[0].pageX - touch.x1;
+			touch.dy = e.touches[0].pageY - touch.y1;
+			if (window.innerHeight <= 356 && touch.dy > 0 && !window.inAction) {       //DRAGGING DOWN
+				if (!window.draggingDown) {
+					newTopList = $(templates.newList('top')).addClass('drag').prependTo(home.el);
+					home.el.addClass('drag');
+					window.draggingDown = true;
+				}
+				var d = touch.dy * .4;
+				home.el.css({
+					'-webkit-transform':'translate3d(0,' + (d >= 60 ? d - 60 : d) + 'px,0)',
+					'top': d >= 60 ? '60px' : '0'
+				});
+				if (newTopList) {
+					newTopList.css({
+						'-webkit-transform': 'rotateX('+ Math.max((1-d/60)*85, 0) +'deg)',
+						'opacity': d/60*.7 + .3
+					});
+					newTopList.find('input').val(d >= 60 ? 'Release to create item' : 'Pull to create item' );
+				}
+			}
+		})
+		.bind('touchend touchcancel', function(){
+			window.draggingDown = false;
+			if (touch.dy*.4 >= 60 && newTopList) {
+				newTopList.siblings().addClass('medium').css('opacity',.3);
+				newTopList.find('input').val('').focus()
+				.bind('blur', function(){
+					window.editing = false;
+					var name = this.value;
+					newTopList.siblings().css('opacity',1);
+					if (!name) {
+						newTopList.removeClass('drag').addClass('medium').css('-webkit-transform','translate3d(-'+ window.innerWidth +'px,0,0)');
+						setTimeout(function(){
+							newTopList.css('height', 0);
+						}, 250);
+						setTimeout(function(){
+							home.reset();
+						}, 500);
+					} else {
+						var newList = new List(name,[]);
+						home.lists.unshift(newList);
+						setTimeout(function(){
+							home.reset();
+						}, 250);
+					}
+				});
+				window.editing = true;
+			} else {
+				if (newTopList) {
+					newTopList.removeClass('drag').addClass('fast').css('-webkit-transform','rotateX(85deg)');
+					setTimeout(function(){
+						newTopList.remove();
+						newTopList = null;
+					}, 150);
+				}
+			}
+			home.el.removeClass('drag').css('-webkit-transform','translate3d(0,0,0)');
+			touch = {};
+		})
+		.bind('tap', function(e){
+			//create new list at the end
+			if (!window.editing) {
+				
+				window.editing = true;
+			
+				var lists = home.el.find('li.list');
+				lists.addClass('slow').css('opacity', .3);
+				setTimeout(function(){
+					lists.removeClass('slow');
+				}, 350);
+			
+				var newList = $(templates.newList('bottom'))
+				.bind('tap', function(e){
+					e.cancelBubble = true;
+				})
+				.addClass('slow')
+				.css({
+					'background-color':'hsl(' + (212-home.lists.length*3)+ ', 95%, 53%)',
+					'opacity': 1
+				})
+				.appendTo(home.el);
+				
+				newList.find('input')
+				.bind('focus', function(){
+					this.value = '';
+				})
+				.bind('blur', function(){
+					window.editing = false;
+					lists.css('opacity', 1);
+					var name = this.value;
+					if (!name) {
+						newList.css('-webkit-transform','translate3d(-'+ window.innerWidth +'px,0,0)');
+						setTimeout(function(){
+							home.reset();
+						}, 350);
+					} else {
+						setTimeout(function(){
+							home.lists.push(new List(name,[]));
+							home.reset();
+						}, 100);
+					}
+				});
+			
+				setTimeout(function(){ //this solving transition not working problem, don't know why though
+					newList.css('-webkit-transform','rotateX(0deg)');
+				}, 10);
+				
+			}
+		});
+		
 		home.reset();
 		return home.el;
 	},
 	reset: function () {
 		var home = this;
-		home.el.empty();
-		$.each(home.lists, function(i, list) {
-			home.el.append(list.renderSelf(home, i));
-		});
-		home.refresh();
+		if (home.lists.length > 0) {
+			home.el.empty().css('top',0);
+			$.each(home.lists, function(i, list) {
+				home.el.append(list.renderSelf(home, i));
+			});
+			home.refresh();
+		} else {
+			home.el.html(templates.emptyHome());
+		}
 	},
 	refresh: function () {
 		var home = this;
@@ -540,12 +853,34 @@ Home.prototype = {
 	}
 };
 
+var app = new Home([
+	new List('Hello', [
+		new Todo('Swipe right to complete'),
+		new Todo('Swipe left to delete'),
+		new Todo('Tap on text to edit'),
+		new Todo('Long tap to change order'),
+		new Todo('Drag down to add new'),
+		new Todo('Pinch in to go back.')
+	]),
+	new List('This is a demo', [
+		new Todo('Built with HTML5'),
+		new Todo('CSS3'),
+		new Todo('and Zepto.js')
+	]),
+	new List('by Evan You', [
+		new Todo('@youyuxi'),
+		new Todo('By the way'),
+		new Todo('I\'m looking for a job!'),
+		new Todo('youyuxi.com')
+	])
+]);
+
 $(function(){
 	
 	//setup scrolling
 	$(document)
 	.bind('touchmove', function(e){
-		if (window.inAction) {
+		if (window.inAction || window.editing || window.draggingDown || document.height < 356) {
 			e.preventDefault();
 		} else {
 			window.globalDrag = true;
@@ -555,28 +890,6 @@ $(function(){
 		window.globalDrag = false;
 	});
 	
-	var home = new Home([
-		new List('Hello', [
-			new Todo('Swipe right to complete'),
-			new Todo('Swipe left to delete'),
-			new Todo('Tap on text to edit'),
-			new Todo('Long tap to change order'),
-			new Todo('Drag down to add new'),
-			new Todo('Pinch in to go back.')
-		]),
-		new List('This is a demo', [
-			new Todo('Built with HTML5'),
-			new Todo('CSS3'),
-			new Todo('and Zepto.js')
-		]),
-		new List('by Evan You', [
-			new Todo('@youyuxi'),
-			new Todo('By the way'),
-			new Todo('I\'m looking for a job!'),
-			new Todo('youyuxi.com')
-		])
-	]);
-	
-	home.render().appendTo('#wrapper');
+	app.render().appendTo('#wrapper');
 	
 });
