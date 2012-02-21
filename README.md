@@ -1,7 +1,7 @@
 What is this?
 ===
 
-The awesome Clear app (almost) replicated in HTML5.
+The awesome Clear app (almost) replicated in HTML5. (tested on iOS only)
 
 The original iphone app by Realmac: [http://www.realmacsoftware.com/clear/](http://www.realmacsoftware.com/clear/)
 
