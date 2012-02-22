@@ -496,7 +496,7 @@ List.prototype = {
 			} else if (e.touches.length == 1 && !window.globalDragging) {
 				
 				touch.dx = e.touches[0].pageX - touch.x1;
-				touch.dy = e.touches[0].pageY - touch.y1;
+				touch.dy = e.touches[0].pageY - touch.y1;// - 5;
 				
 				if (window.innerHeight <= 356 && touch.dy > 0 && !window.inAction) {          //DRAGGING DOWN
 					if (!window.draggingDown) {
@@ -715,7 +715,7 @@ Home.prototype = {
 		.bind('touchmove', function (e) {
 			if (e.touches.length == 1 && !window.globalDragging) {
 				touch.dx = e.touches[0].pageX - touch.x1;
-				touch.dy = e.touches[0].pageY - touch.y1;
+				touch.dy = e.touches[0].pageY - touch.y1; //- 5;
 				if (window.innerHeight <= 356 && touch.dy > 0 && !window.inAction) {       //DRAGGING DOWN
 					if (!window.draggingDown) {
 						newTopList = $(templates.newList('top')).addClass('drag').prependTo(home.el);
