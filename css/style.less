@@ -1,5 +1,4 @@
 @import "classes.less";
-
 body {
 	width: 100%;
 	padding: 0;
@@ -7,6 +6,8 @@ body {
 	background-color: #000;
 	color: #fff;
 	font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+	-ms-overflow-x: hidden;
 	overflow-x: hidden;
 }
 
@@ -22,16 +23,21 @@ a {
 }
 
 #wrapper {
+	-ms-overflow-x: hidden;
 	overflow-x: hidden;
-	overflow-y: scroll;
 }
 
-#check, #cross {
+#check,#cross {
 	display: block;
 	width: 55px;
 	height: 60px;
 	position: absolute;
+
 	-webkit-transition: opacity 0 cubic-bezier(0,0,0.2,1), -webkit-transform 0 cubic-bezier(0,0,0.2,1);
+	-moz-transition: opacity 0 cubic-bezier(0,0,0.2,1), -moz-transform 0 cubic-bezier(0,0,0.2,1);
+	-o-transition: opacity 0 cubic-bezier(0,0,0.2,1), -o-transform 0 cubic-bezier(0,0,0.2,1);
+	-ms-transition: opacity 0 cubic-bezier(0,0,0.2,1), -ms-transform 0 cubic-bezier(0,0,0.2,1);
+	transition: opacity 0 cubic-bezier(0,0,0.2,1), transform 0 cubic-bezier(0,0,0.2,1);
 	-webkit-perspective: 0;
 	-webkit-backface-visibility: hidden;
 	display: none;
@@ -45,27 +51,33 @@ a {
 	right: 0;
 }
 
-#home, #listview {
+#home,#listview {
 	position: absolute;
 	width: 100%;
 	height: 100%;
 	top: 0;
 	left: 0;
+
 	-webkit-transition: -webkit-transform .15s ease, opacity .15s ease;
+	-moz-transition: -moz-transform .15s ease, opacity .15s ease;
+	-o-transition: -o-transform .15s ease, opacity .15s ease;
+	-ms-transition: -ms-transform .15s ease, opacity .15s ease;
+	transition: transform .15s ease, opacity .15s ease;
 	-webkit-perspective: 1000;
 	-webkit-backface-visibility: hidden;
-	li.addmore {
-		line-height: 60px;
-		text-align: center;
-		font-weight: bold;
-		font-size: 18px;
-		color: #ccc;
-		z-index: 0;
-		margin-bottom: -60px;
-	}
+	li.addmore  {
+	 line-height: 60px;
+	text-align: center;
+	font-weight: bold;
+	font-size: 18px;
+	color: #ccc;
+	z-index: 0;
+	margin-bottom: -60px;
 }
 
-#home {
+}
+
+ #home {
 	z-index: 2;
 }
 
@@ -73,10 +85,18 @@ a {
 	z-index: 1;
 }
 
-.list, .todo {
+.list,.todo {
 	height: 60px;
+
 	-webkit-user-select: none;
+	-moz-user-select: none;
+	user-select: none;
+
 	-webkit-transition: all .1s ease;
+	-moz-transition: all .1s ease;
+	-o-transition: all .1s ease;
+	-ms-transition: all .1s ease;
+	transition: all .1s ease;
 	-webkit-perspective: 0;
 	-webkit-backface-visibility: hidden;
 	position: relative;
@@ -94,21 +114,40 @@ a {
 		display: inline-block;
 		position: relative;
 		span {
-			position: absolute;
-			z-index: 2;
-			display: block;
-			width: 100%;
-			height: 2px;
-			background-color: #fff;
-			left: 0;
-			top: 52%;
-			-webkit-user-select: none;
-			-webkit-perspective: 0;
-			-webkit-backface-visibility: hidden;
-			-webkit-transform-origin: 0%;
-			-webkit-transition: -webkit-transform 0 cubic-bezier(0,0,0.2,1); 
-			-webkit-transform: scaleX(0);
-		}
+        	position: absolute;
+        	z-index: 2;
+        	display: block;
+        	width: 100%;
+        	height: 2px;
+        	background-color: #fff;
+        	left: 0;
+        	top: 52%;
+        
+        	-webkit-user-select: none;
+        	-moz-user-select: none;
+        	user-select: none;
+        	-webkit-perspective: 0;
+        	-webkit-backface-visibility: hidden;
+        
+        	-webkit-transform-origin: 0%;
+        	-moz-transform-origin: 0%;
+        	-o-transform-origin: 0%;
+        	-ms-transform-origin: 0%;
+        	transform-origin: 0%;
+        
+        	-webkit-transition: -webkit-transform 0 cubic-bezier(0,0,0.2,1);
+        	-moz-transition: -moz-transform 0 cubic-bezier(0,0,0.2,1);
+        	-o-transition: -o-transform 0 cubic-bezier(0,0,0.2,1);
+        	-ms-transition: -ms-transform 0 cubic-bezier(0,0,0.2,1);
+        	transition: transform 0 cubic-bezier(0,0,0.2,1);
+        
+        	-webkit-transform: scaleX(0);
+        	-moz-transform: scaleX(0);
+        	-o-transform: scaleX(0);
+        	-ms-transform: scaleX(0);
+        	transform: scaleX(0);
+        }
+
 	}
 	input[type="text"] {
 		border: none;
@@ -149,9 +188,13 @@ a {
 		background-color: #252525 !important;
 		color: #434343;
 		.name span {
-			-webkit-transform: scaleX(1) !important;
-			background-color: #434343 !important;
-		}
+        	-webkit-transform: scaleX(1) !important;
+        	-moz-transform: scaleX(1) !important;
+        	-o-transform: scaleX(1) !important;
+        	-ms-transform: scaleX(1) !important;
+        	transform: scaleX(1) !important;
+        	background-color: #434343 !important;
+        }
 		a {
 			color: #434343 !important;
 		}
