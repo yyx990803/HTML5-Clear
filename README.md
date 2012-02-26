@@ -31,6 +31,6 @@ This is tested on iOS only, and there are quite a few features missing:
 
 - Drag all the way to go up/down a level
 - Pinch apart to add new item
-- Drag down to clear done items
+- Drag up to clear done items
 
 Also there are quite a few bugs, mostly due to my not-so-robust touch event handling. Will try to work on that later when I got time.
