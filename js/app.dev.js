@@ -230,7 +230,7 @@ Todo.prototype = {
 						todo.done = true;
 					}
 					setTimeout(function(){
-						todo.list.resetView();
+						todo.list.refreshView();
 					}, 150);
 				}
 				
@@ -266,7 +266,7 @@ Todo.prototype = {
 		setTimeout(function(){
 			todo.el.remove();
 			todo.list.todos.splice(todo.index, 1);
-			todo.list.resetView();
+			todo.list.refreshView();
 		}, 500);
 	}
 };
@@ -543,13 +543,13 @@ List.prototype = {
 								newTopTodo.css('height', 0);
 							}, 250);
 							setTimeout(function(){
-								list.resetView();
+								list.refreshView();
 							}, 500);
 						} else {
 							var newTodo = new Todo(name);
 							list.todos.unshift(newTodo);
 							setTimeout(function(){
-								list.resetView();
+								list.refreshView();
 							}, 250);
 						}
 					});
@@ -589,10 +589,12 @@ List.prototype = {
 				})
 				.addClass('slow')
 				.appendTo(list.view)
-				.css({
+				.animate({
 					'background-color':'hsl(' + (353+list.count()*10)+ ', 95%, 53%)',
 					'opacity': 1
-				});
+				},{
+  					duration: 600,
+  					easing: 'ease-out'});
 				
 				newTodo.find('input')
 				.bind('focus', function(){
@@ -605,7 +607,7 @@ List.prototype = {
 					if (!name) { //cancel
 						newTodo.css('-webkit-transform','translate3d(-'+ window.innerWidth +'px,0,0)');
 						setTimeout(function(){
-							list.resetView();
+							list.refreshView();
 						}, 350);
 					} else { //create
 						var dones = list.view.find('li.done');
@@ -613,7 +615,7 @@ List.prototype = {
 						dones.addClass('slow').css('-webkit-transform','translate3d(0,60px,0)');
 						setTimeout(function(){
 							list.todos.splice(list.count(), 0, new Todo(name));
-							list.resetView();
+							list.refreshView();
 						}, 350);
 					}
 				});
@@ -649,7 +651,7 @@ List.prototype = {
 		
 		setTimeout(function(){
 			list.home.el.removeClass('slow');
-			list.resetView();
+			list.refreshView();
 		}, 360);
 		
 		return list.view;
@@ -673,7 +675,10 @@ List.prototype = {
 		var list = this,
 			dones = list.view.find('.todo:not(.done)');
 		dones.each(function(i){
-			$(this).css('background-color','hsl(' + (353+i*Math.min(70/dones.length,10)) + ',95%,' + (i==0 ? '48%':'53%') + ')');
+		$(this).animate({'background-color': 'hsl(' + (353+i*Math.min(70/dones.length,10)) + ',95%,' + (i==0 ? '48%':'53%') + ')'}, {
+  duration: 600,
+  easing: 'ease-out'});
+/* 			$(this).css('background-color','hsl(' + (353+i*Math.min(70/dones.length,10)) + ',95%,' + (i==0 ? '48%':'53%') + ')'); */
 		});
 	},
 	destroy: function () {
@@ -794,10 +799,12 @@ Home.prototype = {
 					e.cancelBubble = true;
 				})
 				.addClass('slow')
-				.css({
+				.animate({
 					'background-color':'hsl(' + (212-home.lists.length*3)+ ', 95%, 53%)',
 					'opacity': 1
-				})
+				},{
+  duration: 600,
+  easing: 'ease-out'})
 				.appendTo(home.el);
 				
 				newList.find('input')
@@ -846,7 +853,10 @@ Home.prototype = {
 	refresh: function () {
 		var home = this;
 		home.el.find('.list').each(function(i){
-			$(this).css('background-color','hsl(' + (212-i*3) + ', 100%, 53%)');
+			$(this).animate({'background-color':'hsl(' + (212-i*3) + ', 100%, 53%)'}, {
+  duration: 100,
+  easing: 'ease-out'});
+/* 			$(this).css('background-color','hsl(' + (212-i*3) + ', 100%, 53%)'); */
 		});
 	},
 	resetIcons: function(el) {
