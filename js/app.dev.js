@@ -488,9 +488,14 @@ List.prototype = {
 						list.view.remove();
 					}, 350);
 					triggered = true;
-				} else if (odist - dist < -50) {                   //PINCH OUT
-					//console.log(pinchY);
-					triggered = true;
+				} else if (odist - dist < -20) {                   //PINCH OUT
+					var insertAfter = Math.round(pinchY/60);
+					
+					list.todos.splice(insertAfter, 0, new Todo(name));
+					list.view.css({
+						'-webkit-transform':'translate3d(' + insertAfter*60 + ',' + (insertAfter+1)*60 + 'px,0)'
+					});
+					list.resetView();
 				}
 				
 			} else if (e.touches.length == 1 && !window.globalDragging) {
