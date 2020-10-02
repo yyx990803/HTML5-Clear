@@ -1,4 +1,5 @@
 .drag{-webkit-transition:all 0 cubic-bezier(0, 0, 0.2, 1) !important;}
+/* What is this */
 .dragged{z-index:999 !important;box-shadow:0 1px 8px rgba(0, 0, 0, 0.3);-webkit-transition:all 0 cubic-bezier(0, 0, 0.2, 1) !important;}
 .slow{-webkit-transition:all 0.35s ease-in-out !important;}
 .medium{-webkit-transition:all 0.25s ease-in-out !important;}
